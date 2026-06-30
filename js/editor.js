@@ -7,6 +7,7 @@
 
 const CELL_W             = 80;
 const CELL_H             = 60;
+const MID                 = CELL_H / 2;
 const BRANCH_H           = 60;
 const RUNG_PADDING_LEFT  = 50;
 const RUNG_PADDING_RIGHT = 50;
