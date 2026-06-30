@@ -13,42 +13,120 @@
     <span class="subtitle">Simulador de Lógica Ladder</span>
   </header>
 
-  <main>
+  <!-- Controles de execução -->
+  <section class="controls">
+    <button id="btn-start">▶ Start</button>
+    <button id="btn-stop" disabled>⏹ Stop</button>
+    <button id="btn-step">⏭ Step</button>
+    <label>
+      Scan:
+      <input type="range" id="scan-speed" min="50" max="1000" value="100" step="50">
+      <span id="scan-speed-label">100ms</span>
+    </label>
+  </section>
 
-    <!-- Controles -->
-    <section class="controls">
-      <button id="btn-start">▶ Start</button>
-      <button id="btn-stop" disabled>⏹ Stop</button>
-      <button id="btn-step">⏭ Step</button>
-      <label>
-        Scan:
-        <input type="range" id="scan-speed" min="50" max="1000" value="100" step="50">
-        <span id="scan-speed-label">100ms</span>
-      </label>
+  <!-- Toolbar de elementos -->
+  <section class="toolbar">
+    <span class="toolbar-label">Inserir:</span>
+
+    <button class="tool-btn" data-type="NO" title="Contato NA — Normalmente Aberto">
+      <svg width="48" height="28" viewBox="0 0 80 60">
+        <line x1="0"  y1="30" x2="20" y2="30" class="wire"/>
+        <line x1="20" y1="10" x2="20" y2="50" class="contact"/>
+        <line x1="60" y1="10" x2="60" y2="50" class="contact"/>
+        <line x1="60" y1="30" x2="80" y2="30" class="wire"/>
+      </svg>
+      <span>NA</span>
+    </button>
+
+    <button class="tool-btn" data-type="NC" title="Contato NF — Normalmente Fechado">
+      <svg width="48" height="28" viewBox="0 0 80 60">
+        <line x1="0"  y1="30" x2="20" y2="30" class="wire"/>
+        <line x1="20" y1="10" x2="20" y2="50" class="contact"/>
+        <line x1="60" y1="10" x2="60" y2="50" class="contact"/>
+        <line x1="20" y1="50" x2="60" y2="10" class="contact"/>
+        <line x1="60" y1="30" x2="80" y2="30" class="wire"/>
+      </svg>
+      <span>NF</span>
+    </button>
+
+    <button class="tool-btn" data-type="COIL" title="Bobina">
+      <svg width="48" height="28" viewBox="0 0 80 60">
+        <line x1="0"  y1="30" x2="24" y2="30" class="wire"/>
+        <circle cx="40" cy="30" r="16" class="coil"/>
+        <line x1="56" y1="30" x2="80" y2="30" class="wire"/>
+      </svg>
+      <span>Bobina</span>
+    </button>
+
+    <button class="tool-btn" data-type="COIL_NEG" title="Bobina Negada">
+      <svg width="48" height="28" viewBox="0 0 80 60">
+        <line x1="0"  y1="30" x2="24" y2="30" class="wire"/>
+        <circle cx="40" cy="30" r="16" class="coil"/>
+        <line x1="32" y1="40" x2="48" y2="20" class="contact"/>
+        <line x1="56" y1="30" x2="80" y2="30" class="wire"/>
+      </svg>
+      <span>Bob/</span>
+    </button>
+
+    <button class="tool-btn" data-type="SET" title="Bobina SET">
+      <svg width="48" height="28" viewBox="0 0 80 60">
+        <line x1="0"  y1="30" x2="24" y2="30" class="wire"/>
+        <circle cx="40" cy="30" r="16" class="coil"/>
+        <text x="40" y="35" class="coil-label">S</text>
+        <line x1="56" y1="30" x2="80" y2="30" class="wire"/>
+      </svg>
+      <span>SET</span>
+    </button>
+
+    <button class="tool-btn" data-type="RESET" title="Bobina RESET">
+      <svg width="48" height="28" viewBox="0 0 80 60">
+        <line x1="0"  y1="30" x2="24" y2="30" class="wire"/>
+        <circle cx="40" cy="30" r="16" class="coil"/>
+        <text x="40" y="35" class="coil-label">R</text>
+        <line x1="56" y1="30" x2="80" y2="30" class="wire"/>
+      </svg>
+      <span>RESET</span>
+    </button>
+
+    <div class="toolbar-sep"></div>
+
+    <button class="tool-btn" id="btn-add-rung" title="Adicionar rung">
+      <span style="font-size:1.2rem">＋</span>
+      <span>Rung</span>
+    </button>
+
+    <button class="tool-btn danger" id="btn-clear" title="Limpar programa">
+      <span style="font-size:1.2rem">🗑</span>
+      <span>Limpar</span>
+    </button>
+
+  </section>
+
+  <!-- Instrução de uso -->
+  <div id="editor-hint" class="editor-hint">
+    Selecione um elemento acima e clique no rung para inserir. Clique com botão direito num elemento para deletar.
+  </div>
+
+  <div class="workspace">
+
+    <!-- Canvas SVG -->
+    <section class="ladder-canvas">
+      <svg id="ladder-svg" width="100%"></svg>
     </section>
 
-    <div class="workspace">
+    <!-- Painel I/O -->
+    <aside class="io-panel">
+      <div id="panel-inputs"></div>
+      <div id="panel-outputs"></div>
+    </aside>
 
-      <!-- Canvas SVG do diagrama Ladder -->
-      <section class="ladder-canvas">
-        <svg id="ladder-svg" width="100%"></svg>
-      </section>
-
-      <!-- Painel de I/O -->
-      <aside class="io-panel">
-        <div id="panel-inputs"></div>
-        <div id="panel-outputs"></div>
-      </aside>
-
-    </div>
-
-  </main>
+  </div>
 
   <footer>
     <p>Projeto de portfólio — <a href="https://github.com/rafaelf09" target="_blank">rafaelf09</a></p>
   </footer>
 
-  <!-- Scripts na ordem correta -->
   <script src="js/engine.js"></script>
   <script src="js/elements.js"></script>
   <script src="js/editor.js"></script>

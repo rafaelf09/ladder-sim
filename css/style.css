@@ -122,3 +122,77 @@ footer {
   color: var(--text-dim);
 }
 footer a { color: var(--accent); text-decoration: none; }
+
+/* Toolbar de elementos */
+.toolbar {
+  background: var(--surface);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+}
+.toolbar-label { color: var(--text-dim); font-size: 0.8rem; margin-right: 4px; }
+.toolbar-sep { width: 1px; height: 40px; background: #333; margin: 0 8px; }
+
+.tool-btn {
+  background: var(--panel);
+  border: 1px solid #444;
+  color: var(--text);
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  transition: background 0.15s, border-color 0.15s;
+  min-width: 56px;
+}
+.tool-btn svg .wire    { stroke: #888; stroke-width: 2; fill: none; }
+.tool-btn svg .contact { stroke: #888; stroke-width: 2.5; fill: none; }
+.tool-btn svg .coil    { stroke: #888; stroke-width: 2.5; fill: none; }
+.tool-btn svg .coil-label { fill: #888; font-size: 12px; text-anchor: middle; }
+.tool-btn:hover { background: #1a3a6e; border-color: var(--accent); }
+.tool-btn.active {
+  background: #1a3a6e;
+  border-color: var(--on-color);
+  color: var(--on-color);
+}
+.tool-btn.active svg .wire    { stroke: var(--on-color); }
+.tool-btn.active svg .contact { stroke: var(--on-color); }
+.tool-btn.active svg .coil    { stroke: var(--on-color); }
+.tool-btn.danger { border-color: #e94560; }
+.tool-btn.danger:hover { background: var(--accent); }
+
+/* Hint do editor */
+.editor-hint {
+  background: #0a1628;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  padding: 6px 24px;
+  border-bottom: 1px solid #222;
+}
+
+/* Zona de inserção no SVG */
+.insert-zone {
+  fill: transparent;
+  stroke: #2a4a7a;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+  rx: 4;
+}
+.insert-zone:hover { fill: rgba(0, 212, 170, 0.08); stroke: var(--on-color); }
+.insert-hint {
+  fill: var(--on-color);
+  font-size: 20px;
+  text-anchor: middle;
+  opacity: 0.5;
+}
+
+/* Botão deletar rung */
+.delete-btn     { fill: #3a1a2a; stroke: var(--accent); stroke-width: 1.5; }
+.delete-btn-txt { fill: var(--accent); font-size: 14px; text-anchor: middle; font-family: sans-serif; }
