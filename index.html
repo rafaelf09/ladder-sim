@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ladder Sim — Simulador de Lógica Ladder</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header>
+    <h1>⚡ Ladder Sim</h1>
+    <span class="subtitle">Simulador de Lógica Ladder</span>
+  </header>
+
+  <main>
+
+    <!-- Controles -->
+    <section class="controls">
+      <button id="btn-start">▶ Start</button>
+      <button id="btn-stop" disabled>⏹ Stop</button>
+      <button id="btn-step">⏭ Step</button>
+      <label>
+        Scan:
+        <input type="range" id="scan-speed" min="50" max="1000" value="100" step="50">
+        <span id="scan-speed-label">100ms</span>
+      </label>
+    </section>
+
+    <div class="workspace">
+
+      <!-- Canvas SVG do diagrama Ladder -->
+      <section class="ladder-canvas">
+        <svg id="ladder-svg" width="100%"></svg>
+      </section>
+
+      <!-- Painel de I/O -->
+      <aside class="io-panel">
+        <div id="panel-inputs"></div>
+        <div id="panel-outputs"></div>
+      </aside>
+
+    </div>
+
+  </main>
+
+  <footer>
+    <p>Projeto de portfólio — <a href="https://github.com/rafaelf09" target="_blank">rafaelf09</a></p>
+  </footer>
+
+  <!-- Scripts na ordem correta -->
+  <script src="js/engine.js"></script>
+  <script src="js/elements.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/ui.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      window.LadderEditor.init('ladder-svg');
+      window.UI.init();
+    });
+  </script>
+
+</body>
+</html>
