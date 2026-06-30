@@ -1,0 +1,124 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #1a1a2e;
+  --surface:   #16213e;
+  --panel:     #0f3460;
+  --accent:    #e94560;
+  --on-color:  #00d4aa;
+  --off-color: #444;
+  --wire:      #888;
+  --wire-live: #00d4aa;
+  --text:      #e0e0e0;
+  --text-dim:  #888;
+}
+
+body {
+  font-family: 'Courier New', monospace;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  background: var(--surface);
+  padding: 16px 24px;
+  border-bottom: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+header h1 { font-size: 1.4rem; color: var(--accent); }
+.subtitle  { color: var(--text-dim); font-size: 0.9rem; }
+
+.controls {
+  background: var(--surface);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #333;
+}
+.controls button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #444;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.controls button:hover:not(:disabled) { background: var(--accent); }
+.controls button:disabled { opacity: 0.4; cursor: not-allowed; }
+.controls label { display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-size: 0.85rem; }
+#scan-speed { accent-color: var(--accent); }
+#scan-speed-label { color: var(--on-color); min-width: 48px; }
+
+.workspace { display: flex; flex: 1; }
+
+.ladder-canvas { flex: 1; padding: 24px; overflow-x: auto; background: var(--bg); }
+#ladder-svg { min-height: 200px; }
+
+.wire      { stroke: var(--wire);      stroke-width: 2; fill: none; }
+.contact   { stroke: var(--wire);      stroke-width: 2.5; fill: none; }
+.coil      { stroke: var(--wire);      stroke-width: 2.5; fill: none; }
+.bus-left  { stroke: #666;             stroke-width: 2; }
+.bus-right { stroke: #666;             stroke-width: 2; }
+.bus-bar   { stroke: #555;             stroke-width: 3; }
+.tag       { fill: var(--text-dim);    font-size: 11px; text-anchor: middle; font-family: 'Courier New'; }
+.coil-label{ fill: var(--text);        font-size: 12px; text-anchor: middle; font-family: 'Courier New'; }
+.rung-number { fill: #555; font-size: 11px; }
+
+.energized .wire    { stroke: var(--wire-live); }
+.energized .contact { stroke: var(--wire-live); }
+.energized .coil    { stroke: var(--wire-live); }
+.energized .tag     { fill: var(--wire-live); }
+
+.io-panel {
+  width: 200px;
+  background: var(--surface);
+  border-left: 1px solid #333;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.io-panel h3 {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 6px;
+}
+.io-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.io-tag { font-size: 0.85rem; min-width: 48px; }
+.io-btn {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #444;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  border-radius: 3px;
+  min-width: 36px;
+}
+.io-btn:hover { background: var(--accent); }
+.io-indicator { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.io-indicator.on  { background: var(--on-color); box-shadow: 0 0 6px var(--on-color); }
+.io-indicator.off { background: var(--off-color); }
+
+footer {
+  background: var(--surface);
+  padding: 10px 24px;
+  border-top: 1px solid #333;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+footer a { color: var(--accent); text-decoration: none; }
