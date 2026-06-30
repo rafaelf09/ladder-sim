@@ -1,15 +1,22 @@
-// editor.js — Renderização SVG e lógica de edição
+// ============================================================
+// editor.js — Renderização SVG e editor interativo
+// Versão 2.0 — suporte a branches paralelas
+// ============================================================
 
-const RUNG_PADDING_LEFT  = 40;
-const RUNG_PADDING_RIGHT = 40;
-const RUNG_HEIGHT        = 80;
-const RUNG_GAP           = 20;
+'use strict';
+
+const CELL_W             = 80;
+const CELL_H             = 60;
+const BRANCH_H           = 60;
+const RUNG_PADDING_LEFT  = 50;
+const RUNG_PADDING_RIGHT = 50;
+const RUNG_GAP           = 16;
+const BUS_MID            = 30;
 
 const Editor = {
-
-  svgEl: null,
-  selectedTool: null,  // tipo do elemento selecionado na toolbar
-  onElementClick: null,
+  svgEl:        null,
+  selectedTool: null,
+  _ns:          'http://www.w3.org/2000/svg',
 
   init(svgId) {
     this.svgEl = document.getElementById(svgId);
@@ -17,130 +24,224 @@ const Editor = {
   },
 
   // ------------------------------------------------------------
-  // Toolbar — seleciona qual elemento vai ser inserido
+  // TOOLBAR
   // ------------------------------------------------------------
   _setupToolbar() {
     document.querySelectorAll('.tool-btn[data-type]').forEach(btn => {
       btn.addEventListener('click', () => {
-        // Desmarca todos
         document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-        // Marca o clicado
         btn.classList.add('active');
         this.selectedTool = btn.dataset.type;
-        document.getElementById('editor-hint').textContent =
-          `Elemento "${btn.querySelector('span:last-child').textContent}" selecionado — clique no rung para inserir. Botão direito para deletar.`;
+        this._setHint(`"${btn.querySelector('.tool-label').textContent}" selecionado — clique no rung para inserir. Botão direito para deletar.`);
+        this.render();
       });
     });
 
-    // Botão adicionar rung
     document.getElementById('btn-add-rung').addEventListener('click', () => {
       window.LadderEngine.Program.addRung([]);
       this.render();
       window.UI.buildIOPanel();
     });
 
-    // Botão limpar
     document.getElementById('btn-clear').addEventListener('click', () => {
-      if (!confirm('Limpar o programa?')) return;
+      if (!confirm('Limpar o programa inteiro?')) return;
       window.LadderEngine.Program.clear();
       window.LadderEngine.State.reset();
       window.LadderEngine.Program.addRung([]);
       this.render();
       window.UI.buildIOPanel();
     });
+
+    document.getElementById('btn-export').addEventListener('click', () => {
+      const json = window.LadderEngine.Program.toJSON();
+      const blob = new Blob([json], { type: 'application/json' });
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = 'programa-ladder.json';
+      a.click();
+    });
+
+    document.getElementById('btn-import').addEventListener('click', () => {
+      document.getElementById('input-import').click();
+    });
+
+    document.getElementById('input-import').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          window.LadderEngine.Program.fromJSON(ev.target.result);
+          window.LadderEngine.State.reset();
+          this.render();
+          window.UI.buildIOPanel();
+          this._setHint('Programa importado com sucesso.');
+        } catch(err) {
+          alert('Erro ao importar: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+  },
+
+  _setHint(msg) {
+    const el = document.getElementById('editor-hint');
+    if (el) el.textContent = msg;
   },
 
   // ------------------------------------------------------------
-  // Renderiza todos os rungs
+  // RENDER PRINCIPAL
   // ------------------------------------------------------------
   render() {
-    const { Program, State } = window.LadderEngine;
-    const { Elements, CELL_W } = window.LadderElements;
-
-    const totalHeight = Math.max(
-      300,
-      Program.rungs.length * (RUNG_HEIGHT + RUNG_GAP) + RUNG_GAP * 2
-    );
-    this.svgEl.setAttribute('height', totalHeight);
+    const { Program } = window.LadderEngine;
     this.svgEl.innerHTML = '';
 
+    let yOffset = RUNG_GAP;
+
     Program.rungs.forEach((rung, rungIndex) => {
-      const y = RUNG_GAP + rungIndex * (RUNG_HEIGHT + RUNG_GAP);
-      const xEnd = RUNG_PADDING_LEFT + Math.max(rung.elements.length, 1) * CELL_W;
+      const rungHeight = this._calcRungHeight(rung);
+      this._renderRung(rung, rungIndex, yOffset, rungHeight);
+      yOffset += rungHeight + RUNG_GAP;
+    });
 
-      // Barramentos
-      this._line(0, y + 30, RUNG_PADDING_LEFT, y + 30, 'bus-left');
-      this._line(xEnd, y + 30, xEnd + RUNG_PADDING_RIGHT, y + 30, 'bus-right');
-      this._line(RUNG_PADDING_LEFT, y + 10, RUNG_PADDING_LEFT, y + 50, 'bus-bar');
-      this._line(xEnd + RUNG_PADDING_RIGHT, y + 10, xEnd + RUNG_PADDING_RIGHT, y + 50, 'bus-bar');
+    this.svgEl.setAttribute('height', Math.max(300, yOffset));
+  },
 
-      // Número do rung
-      this._text(14, y + 35, String(rungIndex + 1), 'rung-number');
+  // ------------------------------------------------------------
+  // ALTURA DE UM RUNG (depende do número de branches)
+  // ------------------------------------------------------------
+  _calcRungHeight(rung) {
+    return rung.branches.length * BRANCH_H + 20;
+  },
 
-      // Botão deletar rung (×)
-      this._deleteRungBtn(xEnd + RUNG_PADDING_RIGHT + 8, y + 26, rungIndex);
+  // ------------------------------------------------------------
+  // RENDER DE UM RUNG
+  // ------------------------------------------------------------
+  _renderRung(rung, rungIndex, y, rungHeight) {
+    const { State } = window.LadderEngine;
+    const { Elements } = window.LadderElements;
 
-      // Zona clicável para inserir elemento no rung (área vazia)
-      this._insertZone(rungIndex, rung, y);
+    const midY       = y + rungHeight / 2;
+    const maxElems   = Math.max(...rung.branches.map(b => b.length), 1);
+    const rungWidth  = RUNG_PADDING_LEFT + maxElems * CELL_W + RUNG_PADDING_RIGHT;
 
-      // Elementos do rung
-      rung.elements.forEach((el, elIndex) => {
-        const x = RUNG_PADDING_LEFT + elIndex * CELL_W;
-        const energized = this._isEnergized(rung, elIndex);
-        const svgStr = Elements.render(el.type, x, y, el.tag, energized);
+    // --- Barra esquerda ---
+    this._line(0, midY, RUNG_PADDING_LEFT, midY, 'bus-left');
+    this._line(RUNG_PADDING_LEFT, y + 10, RUNG_PADDING_LEFT, y + rungHeight - 10, 'bus-bar');
 
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.innerHTML = svgStr;
+    // --- Barra direita ---
+    const xRight = RUNG_PADDING_LEFT + maxElems * CELL_W;
+    this._line(xRight, midY, xRight + RUNG_PADDING_RIGHT, midY, 'bus-right');
+    this._line(xRight, y + 10, xRight, y + rungHeight - 10, 'bus-bar');
+
+    // --- Número do rung ---
+    this._text(16, midY + 4, String(rungIndex + 1), 'rung-number');
+
+    // --- Botão deletar rung ---
+    if (window.LadderEngine.Program.rungs.length > 1) {
+      this._deleteRungBtn(xRight + RUNG_PADDING_RIGHT + 6, midY - 10, rungIndex);
+    }
+
+    // --- Botão adicionar branch paralela ---
+    this._addBranchBtn(xRight + RUNG_PADDING_RIGHT + 6, midY + 10, rungIndex);
+
+    // --- Branches ---
+    rung.branches.forEach((branch, branchIndex) => {
+      const branchY = y + 10 + branchIndex * BRANCH_H + BRANCH_H / 2 - BUS_MID;
+
+      // Linha de conexão vertical entre branches (esquerda)
+      if (rung.branches.length > 1) {
+        if (branchIndex === 0) {
+          this._line(RUNG_PADDING_LEFT, branchY + BUS_MID, RUNG_PADDING_LEFT, y + 10 + BRANCH_H + BRANCH_H / 2 - BUS_MID, 'bus-branch');
+        }
+      }
+
+      // Elementos da branch
+      branch.forEach((el, elIndex) => {
+        const x         = RUNG_PADDING_LEFT + elIndex * CELL_W;
+        const energized = this._isEnergized(branch, elIndex);
+        const svgStr    = Elements.render(el.type, x, branchY, el.tag, energized);
+
+        const g = this._svgEl('g');
+        g.innerHTML  = svgStr;
         g.style.cursor = 'pointer';
+        g.dataset.rung   = rungIndex;
+        g.dataset.branch = branchIndex;
+        g.dataset.el     = elIndex;
 
-        // Clique esquerdo — insere antes deste elemento
+        // Clique esquerdo — insere antes
         g.addEventListener('click', (e) => {
           e.stopPropagation();
           if (this.selectedTool) {
-            this._insertElement(rungIndex, elIndex);
+            this._insertElement(rungIndex, branchIndex, elIndex);
           }
         });
 
-        // Clique direito — deleta este elemento
+        // Duplo clique — edita tag
+        g.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          const novaTag = prompt('Renomear variável:', el.tag);
+          if (novaTag && novaTag.trim()) {
+            el.tag = novaTag.trim();
+            this.render();
+            window.UI.buildIOPanel();
+          }
+        });
+
+        // Clique direito — deleta
         g.addEventListener('contextmenu', (e) => {
           e.preventDefault();
-          this._deleteElement(rungIndex, elIndex);
+          if (!confirm(`Deletar ${el.type} (${el.tag})?`)) return;
+          window.LadderEngine.Program.removeElement(rungIndex, branchIndex, elIndex);
+          this.render();
+          window.UI.buildIOPanel();
         });
 
         this.svgEl.appendChild(g);
       });
+
+      // Zona de inserção no final da branch
+      this._insertZone(rungIndex, branchIndex, branch.length, branchY);
+
+      // Botão deletar branch (se mais de 1)
+      if (rung.branches.length > 1 && branchIndex > 0) {
+        this._deleteBranchBtn(
+          RUNG_PADDING_LEFT + maxElems * CELL_W + 4,
+          branchY + BUS_MID - 8,
+          rungIndex, branchIndex
+        );
+      }
     });
   },
 
   // ------------------------------------------------------------
-  // Zona clicável no final do rung para inserir elemento
+  // ZONA DE INSERÇÃO
   // ------------------------------------------------------------
-  _insertZone(rungIndex, rung, y) {
-    const { CELL_W } = window.LadderElements;
-    const x = RUNG_PADDING_LEFT + rung.elements.length * CELL_W;
-
-    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  _insertZone(rungIndex, branchIndex, position, y) {
+    const x    = RUNG_PADDING_LEFT + position * CELL_W;
+    const rect = this._svgEl('rect');
     rect.setAttribute('x', x);
-    rect.setAttribute('y', y + 10);
-    rect.setAttribute('width', CELL_W);
-    rect.setAttribute('height', 40);
-    rect.setAttribute('class', 'insert-zone');
+    rect.setAttribute('y', y + 8);
+    rect.setAttribute('width', CELL_W - 4);
+    rect.setAttribute('height', CELL_H - 16);
+    rect.setAttribute('rx', 4);
+    rect.setAttribute('class', 'insert-zone' + (this.selectedTool ? ' active-zone' : ''));
     rect.style.cursor = this.selectedTool ? 'cell' : 'default';
 
     rect.addEventListener('click', (e) => {
       e.stopPropagation();
       if (this.selectedTool) {
-        this._insertElement(rungIndex, rung.elements.length);
+        this._insertElement(rungIndex, branchIndex, position);
       }
     });
 
     this.svgEl.appendChild(rect);
 
-    // Ícone "+" na zona de inserção
     if (this.selectedTool) {
-      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      txt.setAttribute('x', x + CELL_W / 2);
-      txt.setAttribute('y', y + 35);
+      const txt = this._svgEl('text');
+      txt.setAttribute('x', x + CELL_W / 2 - 2);
+      txt.setAttribute('y', y + BUS_MID + 6);
       txt.setAttribute('class', 'insert-hint');
       txt.textContent = '+';
       this.svgEl.appendChild(txt);
@@ -148,98 +249,103 @@ const Editor = {
   },
 
   // ------------------------------------------------------------
-  // Insere um elemento no rung na posição indicada
+  // INSERÇÃO DE ELEMENTO
   // ------------------------------------------------------------
-  _insertElement(rungIndex, position) {
+  _insertElement(rungIndex, branchIndex, position) {
     const tag = this._promptTag(this.selectedTool);
     if (!tag) return;
-
-    const rung = window.LadderEngine.Program.rungs[rungIndex];
-    rung.elements.splice(position, 0, { type: this.selectedTool, tag });
-
+    window.LadderEngine.Program.insertElement(
+      rungIndex, branchIndex, position,
+      { type: this.selectedTool, tag }
+    );
     this.render();
     window.UI.buildIOPanel();
   },
 
   // ------------------------------------------------------------
-  // Deleta um elemento do rung
-  // ------------------------------------------------------------
-  _deleteElement(rungIndex, elIndex) {
-    const rung = window.LadderEngine.Program.rungs[rungIndex];
-    const el = rung.elements[elIndex];
-    if (!confirm(`Deletar elemento ${el.type} (${el.tag})?`)) return;
-    rung.elements.splice(elIndex, 1);
-    this.render();
-    window.UI.buildIOPanel();
-  },
-
-  // ------------------------------------------------------------
-  // Botão × para deletar o rung inteiro
+  // BOTÕES DE CONTROLE
   // ------------------------------------------------------------
   _deleteRungBtn(x, y, rungIndex) {
-    const { Program } = window.LadderEngine;
-    if (Program.rungs.length <= 1) return; // mantém pelo menos 1
-
-    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    g.style.cursor = 'pointer';
-
-    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    circle.setAttribute('cx', x + 8); circle.setAttribute('cy', y + 8);
-    circle.setAttribute('r', 9);
-    circle.setAttribute('class', 'delete-btn');
-
-    const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    txt.setAttribute('x', x + 8); txt.setAttribute('y', y + 13);
-    txt.setAttribute('class', 'delete-btn-txt');
-    txt.textContent = '×';
-
-    g.appendChild(circle);
-    g.appendChild(txt);
-    g.addEventListener('click', (e) => {
-      e.stopPropagation();
+    const g = this._iconBtn(x, y, '×', 'delete-btn', 'delete-btn-txt', () => {
       if (!confirm(`Deletar rung ${rungIndex + 1}?`)) return;
-      Program.rungs.splice(rungIndex, 1);
-      Program.rungs.forEach((r, i) => r.id = i);
+      window.LadderEngine.Program.removeRung(rungIndex);
       this.render();
       window.UI.buildIOPanel();
     });
-
     this.svgEl.appendChild(g);
   },
 
-  // ------------------------------------------------------------
-  // Pede o nome da tag ao usuário
-  // ------------------------------------------------------------
-  _promptTag(type) {
-    const suggestions = {
-      NO: 'I0.0', NC: 'I0.1',
-      COIL: 'Q0.0', COIL_NEG: 'Q0.0',
-      SET: 'M0.0', RESET: 'M0.0'
-    };
-    const tag = prompt(`Nome da variável para ${type}:`, suggestions[type] || 'M0.0');
-    return tag ? tag.trim() : null;
+  _addBranchBtn(x, y, rungIndex) {
+    const g = this._iconBtn(x, y, '⊕', 'branch-btn', 'branch-btn-txt', () => {
+      window.LadderEngine.Program.addBranch(rungIndex);
+      this.render();
+    });
+    this.svgEl.appendChild(g);
+  },
+
+  _deleteBranchBtn(x, y, rungIndex, branchIndex) {
+    const g = this._iconBtn(x, y, '−', 'delete-btn', 'delete-btn-txt', () => {
+      if (!confirm('Deletar branch paralela?')) return;
+      window.LadderEngine.Program.removeBranch(rungIndex, branchIndex);
+      this.render();
+      window.UI.buildIOPanel();
+    });
+    this.svgEl.appendChild(g);
+  },
+
+  _iconBtn(x, y, symbol, circleClass, txtClass, onClick) {
+    const g   = this._svgEl('g');
+    g.style.cursor = 'pointer';
+    const c   = this._svgEl('circle');
+    c.setAttribute('cx', x + 8); c.setAttribute('cy', y + 8); c.setAttribute('r', 9);
+    c.setAttribute('class', circleClass);
+    const t   = this._svgEl('text');
+    t.setAttribute('x', x + 8); t.setAttribute('y', y + 13);
+    t.setAttribute('class', txtClass);
+    t.textContent = symbol;
+    g.appendChild(c); g.appendChild(t);
+    g.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+    return g;
   },
 
   // ------------------------------------------------------------
-  // Calcula energização visual
+  // ENERGIZAÇÃO VISUAL
   // ------------------------------------------------------------
-  _isEnergized(rung, upToIndex) {
+  _isEnergized(branch, upToIndex) {
     const { State } = window.LadderEngine;
     let power = true;
     for (let i = 0; i <= upToIndex; i++) {
-      const el = rung.elements[i];
+      const el  = branch[i];
       const val = State.get(el.tag);
-      if (el.type === 'NO') power = power && val;
+      if      (el.type === 'NO') power = power && val;
       else if (el.type === 'NC') power = power && !val;
     }
     return power;
   },
 
   // ------------------------------------------------------------
-  // Helpers SVG
+  // PROMPT DE TAG
   // ------------------------------------------------------------
+  _promptTag(type) {
+    const defaults = {
+      NO: 'I0.0', NC: 'I0.1',
+      COIL: 'Q0.0', COIL_NEG: 'Q0.0',
+      SET: 'M0.0', RESET: 'M0.0',
+      TON: 'T0', CTU: 'C0'
+    };
+    const tag = prompt(`Variável para ${type}:`, defaults[type] || 'M0.0');
+    return tag ? tag.trim() : null;
+  },
+
+  // ------------------------------------------------------------
+  // HELPERS SVG
+  // ------------------------------------------------------------
+  _svgEl(tag) {
+    return document.createElementNS(this._ns, tag);
+  },
+
   _line(x1, y1, x2, y2, cls) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    const el = this._svgEl('line');
     el.setAttribute('x1', x1); el.setAttribute('y1', y1);
     el.setAttribute('x2', x2); el.setAttribute('y2', y2);
     el.setAttribute('class', cls);
@@ -247,7 +353,7 @@ const Editor = {
   },
 
   _text(x, y, content, cls) {
-    const el = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    const el = this._svgEl('text');
     el.setAttribute('x', x); el.setAttribute('y', y);
     el.setAttribute('class', cls);
     el.textContent = content;

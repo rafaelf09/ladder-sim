@@ -196,3 +196,62 @@ footer a { color: var(--accent); text-decoration: none; }
 /* Botão deletar rung */
 .delete-btn     { fill: #3a1a2a; stroke: var(--accent); stroke-width: 1.5; }
 .delete-btn-txt { fill: var(--accent); font-size: 14px; text-anchor: middle; font-family: sans-serif; }
+
+/* Header actions */
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#select-example {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #444;
+  padding: 6px 10px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#select-example:hover { border-color: var(--accent); }
+.header-actions button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid #444;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8rem;
+  border-radius: 4px;
+}
+.header-actions button:hover { background: var(--accent); }
+
+/* Comentário do programa */
+.program-comment {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Branch paralela */
+.bus-branch { stroke: #555; stroke-width: 2; }
+
+/* Botão adicionar branch */
+.branch-btn     { fill: #1a3a1a; stroke: var(--on-color); stroke-width: 1.5; }
+.branch-btn-txt { fill: var(--on-color); font-size: 12px; text-anchor: middle; font-family: sans-serif; }
+
+/* Zona de inserção ativa */
+.insert-zone { fill: transparent; stroke: #2a4a7a; stroke-width: 1; stroke-dasharray: 4 3; }
+.insert-zone.active-zone { stroke: var(--on-color); }
+.insert-zone.active-zone:hover { fill: rgba(0,212,170,0.08); }
+
+/* Painel memórias */
+#panel-memory h3 { margin-top: 8px; }
+
+/* TON e CTU no SVG */
+.block-rect  { stroke: var(--wire); stroke-width: 2; fill: none; }
+.block-label { fill: var(--text-dim); font-size: 10px; text-anchor: middle; font-family: 'Courier New'; }
+.energized .block-rect  { stroke: var(--wire-live); }
+.energized .block-label { fill: var(--wire-live); }
