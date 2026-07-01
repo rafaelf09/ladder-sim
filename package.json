@@ -1,0 +1,18 @@
+{
+  "name": "ladder-sim",
+  "version": "2.1.0",
+  "description": "Simulador de Lógica Ladder (PLC) no navegador — vanilla JS, sem frameworks.",
+  "private": true,
+  "scripts": {
+    "test": "node test-engine.js && node smoke-test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rafaelf09/ladder-sim"
+  },
+  "license": "MIT"
+}
+

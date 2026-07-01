@@ -9,6 +9,8 @@ const Examples = {
   list: [
     { id: 'partida-direta',    label: 'Partida Direta de Motor' },
     { id: 'estrela-triangulo', label: 'Partida Estrela-Triângulo' },
+    { id: 'reversao-motor',    label: 'Reversão de Motor (Intertravado)' },
+    { id: 'bomba-nivel',       label: 'Bomba com Boias de Nível' },
     { id: 'semaforo',          label: 'Semáforo' },
     { id: 'contagem-pecas',    label: 'Contagem de Peças' },
   ],
@@ -24,6 +26,8 @@ const Examples = {
     switch (id) {
       case 'partida-direta':    this._partidaDireta();    break;
       case 'estrela-triangulo': this._estrelaTriangulo(); break;
+      case 'reversao-motor':    this._reversaoMotor();    break;
+      case 'bomba-nivel':       this._bombaNivel();       break;
       case 'semaforo':          this._semaforo();         break;
       case 'contagem-pecas':    this._contagemPecas();    break;
       default: console.warn('Exemplo não encontrado:', id);
@@ -178,7 +182,68 @@ const Examples = {
       [{ type: 'NO', tag: 'C1_Q' }, { type: 'COIL', tag: 'HL_CHEIO' }],
       'Sinaleiro caixa cheia'
     );
+  },
+
+  // ------------------------------------------------------------
+  // 5. REVERSÃO DE MOTOR COM INTERTRAVAMENTO
+  // ------------------------------------------------------------
+  // S1=liga horário, S2=liga anti-horário, S0=parada geral (NF)
+  // OL=relé de sobrecarga acionado (NA — true quando disparou)
+  // KM1=contator horário, KM2=contator anti-horário
+  // Intertravamento elétrico: KM1 só liga se KM2 estiver desligado
+  // e vice-versa — evita curto de fase por acionamento simultâneo.
+  // ------------------------------------------------------------
+  _reversaoMotor() {
+    const { Program } = window.LadderEngine;
+
+    // Rung 1 — Contator horário KM1 (com selo e intertravado por KM2)
+    const r1 = Program.addRung([], 'Sentido horário');
+    r1.branches = [
+      [{ type: 'NO', tag: 'S1'  }, { type: 'NC', tag: 'S0' }, { type: 'NC', tag: 'OL' }, { type: 'NC', tag: 'KM2' }, { type: 'COIL', tag: 'KM1' }],
+      [{ type: 'NO', tag: 'KM1' }, { type: 'NC', tag: 'S0' }, { type: 'NC', tag: 'OL' }, { type: 'NC', tag: 'KM2' }, { type: 'COIL', tag: 'KM1' }],
+    ];
+
+    // Rung 2 — Contator anti-horário KM2 (com selo e intertravado por KM1)
+    const r2 = Program.addRung([], 'Sentido anti-horário');
+    r2.branches = [
+      [{ type: 'NO', tag: 'S2'  }, { type: 'NC', tag: 'S0' }, { type: 'NC', tag: 'OL' }, { type: 'NC', tag: 'KM1' }, { type: 'COIL', tag: 'KM2' }],
+      [{ type: 'NO', tag: 'KM2' }, { type: 'NC', tag: 'S0' }, { type: 'NC', tag: 'OL' }, { type: 'NC', tag: 'KM1' }, { type: 'COIL', tag: 'KM2' }],
+    ];
+
+    // Rung 3/4 — Sinaleiros de sentido
+    Program.addRung([{ type: 'NO', tag: 'KM1' }, { type: 'COIL', tag: 'HL1' }], 'Sinaleiro horário');
+    Program.addRung([{ type: 'NO', tag: 'KM2' }, { type: 'COIL', tag: 'HL2' }], 'Sinaleiro anti-horário');
+
+    // Rung 5 — Sinaleiro de falha (sobrecarga disparada)
+    Program.addRung([{ type: 'NO', tag: 'OL' }, { type: 'COIL', tag: 'HL_FALHA' }], 'Sinaleiro de sobrecarga');
+  },
+
+  // ------------------------------------------------------------
+  // 6. BOMBA COM BOIAS DE NÍVEL
+  // ------------------------------------------------------------
+  // B_INF=boia de nível baixo (NA — fecha quando reservatório vazio)
+  // B_SUP=boia de nível alto (NA — fecha quando reservatório cheio)
+  // KM_BOMBA=contator da bomba
+  // Liga quando o nível cai abaixo da boia inferior, mantém-se ligada
+  // (selo) até o nível alcançar a boia superior.
+  // ------------------------------------------------------------
+  _bombaNivel() {
+    const { Program } = window.LadderEngine;
+
+    // Rung 1 — Contator da bomba (liga por nível baixo, desliga por nível alto)
+    const r1 = Program.addRung([], 'Controle da bomba por nível');
+    r1.branches = [
+      [{ type: 'NO', tag: 'B_INF'    }, { type: 'NC', tag: 'B_SUP' }, { type: 'COIL', tag: 'KM_BOMBA' }],
+      [{ type: 'NO', tag: 'KM_BOMBA' }, { type: 'NC', tag: 'B_SUP' }, { type: 'COIL', tag: 'KM_BOMBA' }],
+    ];
+
+    // Rung 2 — Sinaleiro bomba ligada
+    Program.addRung([{ type: 'NO', tag: 'KM_BOMBA' }, { type: 'COIL', tag: 'HL_BOMBA' }], 'Sinaleiro bomba ligada');
+
+    // Rung 3 — Sinaleiro reservatório cheio
+    Program.addRung([{ type: 'NO', tag: 'B_SUP' }, { type: 'COIL', tag: 'HL_CHEIO' }], 'Sinaleiro reservatório cheio');
   }
 };
 
 window.LadderExamples = Examples;
+

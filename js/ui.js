@@ -15,6 +15,7 @@ const UI = {
     Engine.onScanComplete = () => {
       Editor.render();
       this.updateIOPanel();
+      window.LadderTrend?.sample();
     };
 
     // Botões de execução
@@ -32,6 +33,7 @@ const UI = {
       Engine.scanCycle();
       Editor.render();
       this.updateIOPanel();
+      window.LadderTrend?.sample();
     });
 
     // Velocidade do scan
@@ -120,19 +122,15 @@ const UI = {
     tags.forEach(tag => {
       const div = document.createElement('div');
       div.className = 'io-row';
+      div.id = 'row-' + tag;
 
-      if (interactive) {
-        div.innerHTML = `
-          <span class="io-tag">${tag}</span>
-          <button class="io-btn" id="btn-${tag}" onclick="UI.toggleInput('${tag}')">OFF</button>
-          <span class="io-indicator off" id="ind-${tag}"></span>
-        `;
-      } else {
-        div.innerHTML = `
-          <span class="io-tag">${tag}</span>
-          <span class="io-indicator off" id="ind-${tag}"></span>
-        `;
-      }
+      div.innerHTML = `
+        <span class="io-tag">${tag}</span>
+        <button class="io-btn" id="btn-${tag}" data-interactive="${interactive}" onclick="UI.toggleInput('${tag}')" ${interactive ? '' : 'disabled'}>OFF</button>
+        <button class="io-mini" id="lock-${tag}" onclick="UI.toggleForce('${tag}')" title="Forçar/destravar valor (simula falha de campo: contato colado, bobina queimada)">🔓</button>
+        <button class="io-mini" id="watch-${tag}" onclick="UI.toggleWatch('${tag}')" title="Monitorar no diagrama de tempo">📈</button>
+        <span class="io-indicator off" id="ind-${tag}"></span>
+      `;
 
       panel.appendChild(div);
     });
@@ -151,12 +149,28 @@ const UI = {
           if (seen.has(el.tag)) return;
           seen.add(el.tag);
 
-          const val = State.get(el.tag);
-          const ind = document.getElementById('ind-' + el.tag);
-          const btn = document.getElementById('btn-' + el.tag);
+          const val    = State.get(el.tag);
+          const forced = State.isForced(el.tag);
+          const watched = window.LadderTrend?.isWatched(el.tag);
 
-          if (ind) ind.className = 'io-indicator ' + (val ? 'on' : 'off');
-          if (btn) btn.textContent = val ? 'ON' : 'OFF';
+          const ind  = document.getElementById('ind-' + el.tag);
+          const btn  = document.getElementById('btn-' + el.tag);
+          const lock = document.getElementById('lock-' + el.tag);
+          const wch  = document.getElementById('watch-' + el.tag);
+          const row  = document.getElementById('row-' + el.tag);
+
+          if (ind) ind.className = 'io-indicator ' + (val ? 'on' : 'off') + (forced ? ' forced' : '');
+          if (btn) {
+            btn.textContent = val ? 'ON' : 'OFF';
+            const naturallyInteractive = btn.dataset.interactive === 'true';
+            btn.disabled = !(naturallyInteractive || forced);
+          }
+          if (lock) {
+            lock.textContent = forced ? '🔒' : '🔓';
+            lock.classList.toggle('active', forced);
+          }
+          if (wch) wch.classList.toggle('active', !!watched);
+          if (row) row.classList.toggle('forced', forced);
         });
       });
     });
@@ -170,7 +184,35 @@ const UI = {
     window.LadderEngine.scanCycle();
     window.LadderEditor.render();
     this.updateIOPanel();
+    window.LadderTrend?.sample();
+  },
+
+  // ------------------------------------------------------------
+  // Forçar / destravar uma tag — simula falha de campo:
+  // forçar uma entrada em ON simula um contato colado;
+  // forçar uma saída simula uma bobina/lâmpada queimada
+  // (a lógica tenta escrever, mas o valor físico não responde).
+  // ------------------------------------------------------------
+  toggleForce(tag) {
+    const { State } = window.LadderEngine;
+    if (State.isForced(tag)) {
+      State.clearForce(tag);
+    } else {
+      State.setForce(tag, State.get(tag));
+    }
+    window.LadderEditor.render();
+    this.updateIOPanel();
+    window.LadderTrend?.sample();
+  },
+
+  // ------------------------------------------------------------
+  // Adiciona/remove uma tag do diagrama de tempo
+  // ------------------------------------------------------------
+  toggleWatch(tag) {
+    window.LadderTrend?.toggle(tag);
+    this.updateIOPanel();
   }
 };
 
 window.UI = UI;
+

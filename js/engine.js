@@ -9,15 +9,42 @@
 // 1. ESTADO GLOBAL
 // ------------------------------------------------------------
 const State = {
-  bits: {},
+  bits:   {},
+  forces: {},   // tag -> valor forçado (simula falha de campo / force industrial)
 
-  get(tag)         { return this.bits[tag] === true; },
-  set(tag, value)  { this.bits[tag] = !!value; },
-  toggle(tag)      { this.bits[tag] = !this.bits[tag]; },
-  reset()          { this.bits = {}; },
+  // Se a tag está forçada, o valor forçado prevalece sobre a lógica —
+  // isso é o que torna possível simular um contato colado (força uma
+  // entrada) ou uma bobina queimada (força uma saída e o rung não
+  // consegue mais mudar o valor real, mesmo com potência chegando).
+  get(tag) {
+    if (tag in this.forces) return this.forces[tag];
+    return this.bits[tag] === true;
+  },
 
-  snapshot()       { return { ...this.bits }; },
-  restore(snap)    { this.bits = { ...snap }; }
+  set(tag, value) {
+    if (tag in this.forces) return; // saída física não responde — "queimada"/travada
+    this.bits[tag] = !!value;
+  },
+
+  toggle(tag) {
+    if (tag in this.forces) this.forces[tag] = !this.forces[tag];
+    else                    this.bits[tag]   = !this.bits[tag];
+  },
+
+  reset() { this.bits = {}; this.forces = {}; },
+
+  // ------------------------------------------------------------
+  // FORÇAR / DESTRAVAR (simulação de falha de campo)
+  // ------------------------------------------------------------
+  setForce(tag, value) { this.forces[tag] = !!value; },
+  clearForce(tag)      { delete this.forces[tag]; },
+  isForced(tag)         { return tag in this.forces; },
+
+  snapshot()    { return { bits: { ...this.bits }, forces: { ...this.forces } }; },
+  restore(snap) {
+    this.bits   = { ...(snap.bits   || {}) };
+    this.forces = { ...(snap.forces || {}) };
+  }
 };
 
 // ------------------------------------------------------------
@@ -284,3 +311,4 @@ window.LadderEngine = {
   get onScanComplete()     { return _onScanComplete; },
   set onScanComplete(fn)   { _onScanComplete = fn; }
 };
+

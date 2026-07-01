@@ -13,4 +13,14 @@ State.set('I0.0', false); scanCycle();
 console.log('TESTE 1 — I0.0=false → Q0.0:', State.get('Q0.0'), '| esperado: false');
 State.set('I0.0', true); scanCycle();
 console.log('TESTE 1 — I0.0=true  → Q0.0:', State.get('Q0.0'), '| esperado: true');
+
+// TESTE 2 — Força de I/O (simulação de falha de campo)
+State.setForce('Q0.0', false);           // "bobina queimada": trava Q0.0 em OFF
+State.set('I0.0', true); scanCycle();    // lógica tenta energizar Q0.0...
+console.log('TESTE 2 — Q0.0 forçado OFF, mesmo com I0.0=true:', State.get('Q0.0'), '| esperado: false');
+State.clearForce('Q0.0');
+scanCycle();
+console.log('TESTE 2 — Após destravar, Q0.0 volta a acompanhar a lógica:', State.get('Q0.0'), '| esperado: true');
+
 console.log('\n✅ Engine OK!');
+
