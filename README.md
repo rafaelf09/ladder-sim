@@ -4,7 +4,7 @@ Simulador de Lógica Ladder (PLC) no navegador, escrito em **JavaScript puro** �
 
 🔗 **Demo:** https://rafaelf09.github.io/ladder-sim/
 
-> Projeto de portfólio de [@rafaelf09](https://github.com/rafaelf09), engenheiro eletricista especializado em sistemas de proteção elétrica. Feito para servir tanto como estudo de caso técnico quanto como ferramenta real de treinamento em lógica ladder para profissionais de automação e elétrica.
+> Projeto de portfólio de [@rafaelf09](https://github.com/rafaelf09), estudante de Engenharia Elétrica com ênfase em Sistemas de Potência. Feito para servir tanto como estudo de caso técnico quanto como ferramenta real de treinamento em lógica ladder para profissionais de automação e elétrica.
 
 ---
 
